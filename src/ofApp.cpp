@@ -65,7 +65,8 @@ void ofApp::setup()
 	std::string lsResult = runBashCommand("ls -l");
 	ofLogNotice() << lsResult;
 
-	std::string scriptPath = apothecaryRoot.string() + "scripts/calculate_formulas.sh";
+	std::string scriptPath = "scripts/calculate_formulas.sh";
+	//scriptPath = apothecaryRoot.string() + scriptPath;
 	ofLogNotice() << scriptPath;
 	std::replace(scriptPath.begin(), scriptPath.end(), '\\', '/');
 	ofLogNotice() << scriptPath;
@@ -92,7 +93,8 @@ void ofApp::draw() {
 	int screenHeight = ofGetHeight();
 	if (bDrawGuides) { // Draw edge of transparent window for clarity
 		
-		ofSetColor(ofColor(80, 80, 80, 196));
+		//ofSetColor(ofColor(0, 174, 0, 196));
+		ofSetColor(ofColor(255, 102, 0, 196));
 		int padding = 7;
 		ofDrawRectangle(0, 0, screenWidth, padding);
 		ofDrawRectangle(0, screenHeight - padding, screenWidth, padding);
@@ -100,8 +102,8 @@ void ofApp::draw() {
 		ofDrawRectangle(screenWidth - padding, padding, padding, screenHeight - 2 * padding);
 
 	}
-	ofSetColor(ofColor(7, 7, 7, 4));
-	ofDrawRectangle(7, 7, screenWidth-7, screenHeight-7);
+	ofSetColor(ofColor(7, 7, 7, 240));
+	ofDrawRectangle(1, 1, screenWidth-3, screenHeight-3);
 
 	ui.Begin();
 	{
