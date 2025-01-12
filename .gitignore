@@ -1,0 +1,8 @@
+.vs/
+bin/
+enc_temp_folder/
+obj/
+ApothecariumSage.sln
+ApothecariumSage.vcxproj
+ApothecariumSage.vcxproj.filters
+ApothecariumSage.vcxproj.user
