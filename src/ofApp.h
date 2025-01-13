@@ -15,8 +15,7 @@
 namespace fs = std::filesystem;
 #include <GLFW/glfw3.h>
 
-class ofApp : public ofBaseApp
-{
+class ofApp : public ofBaseApp {
 public:
 	void setup();
 	void draw();
@@ -24,19 +23,28 @@ public:
 	void keyPressed(int key);
 	void mouseMoved(int x, int y) override;
 
+	void introUpdate();
+	void introDraw();
+	void backgroundUpdate();
+	void backgroundDraw();
+	void faderDraw();
+
+
+	glm::vec3 make_point(float R, float r, float u, float v, float scale = 1.0);
+
 	void windowFocusGained();
 	void windowFocusLost();
-	
+
 	ofxSurfingGui ui;
-	ofParameter<bool> bGui{ "ofApp", true };
+	ofParameter<bool> bGui { "ofApp", true };
 
 	void ShowExampleTable();
 	struct Data {
-		int id; 
-		std::string name; 
-		float value; 
-		double largeValue; 
-		int anotherInt; 
+		int id;
+		std::string name;
+		float value;
+		double largeValue;
+		int anotherInt;
 		std::string description;
 	};
 	std::vector<Data> data;
@@ -55,4 +63,22 @@ public:
 
 	fs::path exeRoot;
 	fs::path apothecaryRoot;
+
+	enum APP_STATE { INTRO, BACKGROUND, COMPILING };
+	APP_STATE state;
+
+	float timerIntro = 0.0f;
+	float timerIntroMAX = 10.0f;	
+
+	ofEasyCam cam;
+	ofMesh face, line;
+
+	std::string baseText = "Apothecary Sage";
+	std::string ellipsis = "";
+	std::vector<std::string> ellipsisStates = { "", ".", "..", "...", "....." };
+	int ellipsisIndex = 0;
+	float ellipsisTimer = 0.0f;
+	float ellipsisInterval = 0.5f; // Time between ellipsis updates
+
+	ofTrueTypeFont customFont;
 };

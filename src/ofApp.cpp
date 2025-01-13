@@ -33,6 +33,15 @@ void ofApp::setup()
 	bFullscreen = 0;
 	ofBackground(0, 0, 0, 0);
 
+	ofSetLineWidth(1);
+	//ofEnableDepthTest();
+
+	state = INTRO;
+
+	this->line.setMode(ofPrimitiveMode::OF_PRIMITIVE_LINES);
+
+	customFont.load("fonts/OCR.ttf", 48);
+
 	// Fill table data
 	data.resize(20); 
 	for (int i = 0; i < data.size(); ++i) {
@@ -115,6 +124,11 @@ void ofApp::draw() {
 	if (isPaused) {
 		return;
 	}
+
+	if (timerIntro <= timerIntroMAX) {
+		faderDraw();
+	}
+
 	int screenWidth = ofGetWidth();
 	int screenHeight = ofGetHeight();
 	if (bDrawGuides) { // Draw edge of transparent window for clarity
@@ -130,6 +144,15 @@ void ofApp::draw() {
 	}
 	ofSetColor(ofColor(7, 7, 7, 240));
 	ofDrawRectangle(1, 1, screenWidth-3, screenHeight-3);
+
+	if (state == INTRO) {
+		introDraw();
+		return;
+	} else if (state == BACKGROUND) {
+		backgroundDraw();
+	} else if (state == COMPILING) {
+		//backgroundDraw();
+	}
 
 	ui.Begin();
 	{
@@ -171,6 +194,23 @@ void ofApp::update() {
 
 	int posx = ofGetWindowPositionX();
 	int posy = ofGetWindowPositionY();
+
+	ellipsisTimer += ofGetLastFrameTime();
+	if (ellipsisTimer > ellipsisInterval) {
+		ellipsisTimer = 0.0f;
+		ellipsisIndex = (ellipsisIndex + 1) % ellipsisStates.size();
+		ellipsis = ellipsisStates[ellipsisIndex];
+	}
+
+
+	if (state == INTRO) {
+		introUpdate();
+		return;
+	} else if (state == BACKGROUND) {
+		backgroundUpdate();
+	} else if (state == COMPILING) {
+		//backgroundUpdate();
+	}
 }
 
 //--------------------------------------------------------------
@@ -406,4 +446,154 @@ void ofApp::windowFocusGained() {
 void ofApp::windowFocusLost() {
 	isPaused = true;
 	ofLogNotice() << "Window focus lost. Pausing app.";
+}
+
+
+void ofApp::introUpdate() {
+
+	timerIntro += ofGetLastFrameTime();
+	if (timerIntro >= timerIntroMAX) {
+		state = BACKGROUND;
+		ofLogNotice() << "INTRO to BACKGROUND";
+		timerIntro = 0.0f;
+	}
+
+	return;
+
+	// https: //junkiyoshi.com/openframeworks20241206/
+	// author junkiyoshi
+	this->face.clear();
+	this->line.clear();
+
+	float phi_deg_step = 8;
+	float theta_deg_step = 20;
+
+	float R = 230;
+	float threshold_1 = 0.55;
+	float threshold_2 = 0.65;
+	float r = R * 0.3;
+
+	int target_deg_start = ofGetFrameNum() * 1.44;
+
+	for (int target_deg = target_deg_start; target_deg <= target_deg_start + 180; target_deg += 180) {
+
+		auto target = glm::vec3(R * cos(target_deg * DEG_TO_RAD), R * sin(target_deg * DEG_TO_RAD), 0);
+
+		for (float phi_deg = 0; phi_deg < 360; phi_deg += phi_deg_step) {
+
+			for (float theta_deg = 0; theta_deg < 360; theta_deg += theta_deg_step) {
+
+				auto location = this->make_point(R, r, theta_deg, phi_deg);
+				auto distance = glm::distance(target, location);
+
+				if (distance > 250) {
+					continue;
+				}
+
+				auto power = distance < 150 ? 1 : ofMap(distance, 150, 250, 1, 0);
+
+				auto index = this->face.getNumVertices();
+				vector<glm::vec3> vertices;
+
+				vertices.push_back(this->make_point(R, r, theta_deg - theta_deg_step * 0.49 * power - 2, phi_deg - phi_deg_step * 0.49 * power - 2));
+				vertices.push_back(this->make_point(R, r, theta_deg + theta_deg_step * 0.49 * power - 2, phi_deg - phi_deg_step * 0.49 * power - 2));
+				vertices.push_back(this->make_point(R, r, theta_deg - theta_deg_step * 0.49 * power - 2, phi_deg + phi_deg_step * 0.49 * power - 2));
+				vertices.push_back(this->make_point(R, r, theta_deg + theta_deg_step * 0.49 * power - 2, phi_deg + phi_deg_step * 0.49 * power - 2));
+
+				this->face.addVertices(vertices);
+				this->line.addVertices(vertices);
+
+				this->face.addIndex(index + 0);
+				this->face.addIndex(index + 1);
+				this->face.addIndex(index + 3);
+				this->face.addIndex(index + 0);
+				this->face.addIndex(index + 3);
+				this->face.addIndex(index + 2);
+
+				this->line.addIndex(index + 0);
+				this->line.addIndex(index + 1);
+				this->line.addIndex(index + 0);
+				this->line.addIndex(index + 2);
+				this->line.addIndex(index + 1);
+				this->line.addIndex(index + 3);
+				this->line.addIndex(index + 2);
+				this->line.addIndex(index + 3);
+			}
+		}
+	}
+}
+void ofApp::introDraw() {
+
+	std::string displayText = baseText;
+	ofRectangle textBounds = customFont.getStringBoundingBox(displayText, 0, 0);
+	ofRectangle textBoundsWhole = customFont.getStringBoundingBox(displayText + " " + ellipsis, 0, 0);
+
+	float centerX = ofGetWidth() / 2.0f;
+	float centerY = ofGetHeight() / 2.0f;
+	/*ofSetColor(0);
+	ofDrawRectangle(centerX - textBounds.getWidth() / 2 - 20,
+		centerY - textBounds.getHeight() / 2 - 20,
+		textBounds.getWidth() + 147,
+		textBounds.getHeight() + 147);*/
+
+	ofSetColor(0, 200, 255);
+	float shadowOffset = 3.0f; 
+	customFont.drawString(displayText + " " + ellipsis,
+		centerX - textBounds.getWidth() / 2 + shadowOffset,
+		centerY + textBounds.getHeight() / 2 + shadowOffset);
+
+	ofSetColor(100, 255, 255);
+	customFont.drawString(displayText + " " + ellipsis,
+		centerX - textBounds.getWidth() / 2,
+		centerY + textBounds.getHeight() / 2);
+
+	return;
+	// art 
+	this->cam.begin();
+	ofRotateX(90);
+
+	ofSetColor(255, 128, 255);
+	this->line.draw();
+
+	ofSetColor(0);
+	this->face.draw();
+
+	this->cam.end();
+}
+void ofApp::backgroundUpdate() {
+	timerIntro += ofGetLastFrameTime();
+	if (timerIntro >= timerIntroMAX) {
+		/*state = BACKGROUND;
+		ofLogNotice() << "INTRO to BACKGROUND";
+		timerIntro = 0.0f;*/
+	}
+}
+void ofApp::backgroundDraw() {
+
+}
+
+glm::vec3 ofApp::make_point(float R, float r, float u, float v, float scale) {
+	u *= DEG_TO_RAD;
+	v *= DEG_TO_RAD;
+
+	auto x = (R + r * cos(u) * scale) * cos(v);
+	auto y = (R + r * cos(u) * scale) * sin(v);
+	auto z = r * sin(u) * scale;
+
+	return glm::vec3(x, y, z);
+}
+
+void ofApp::faderDraw() {
+		float midPoint = timerIntroMAX / 2.0f;
+		float alpha = 0.0f;
+		if (timerIntro <= midPoint) {
+			alpha = ofLerp(0.0f, 255, timerIntro / midPoint);
+		} else if (timerIntro <= timerIntroMAX) {
+			alpha = ofLerp(255, 0.0f, (timerIntro - midPoint) / midPoint);
+		}
+		ofLogNotice() << "alpha: " << alpha;
+		if (alpha > 1) {
+			ofSetColor(200, 0, 255, alpha);
+			ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
+		}
 }

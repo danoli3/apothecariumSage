@@ -6,6 +6,8 @@ int main( ){
 
 	ofGLFWWindowSettings settings;
 	settings.transparent = true;
+	settings.depthBits = 16;
+	settings.numSamples = 2;
 	settings.mousePassThrough = false;
 	settings.floating = true;
 	settings.decorated = true;

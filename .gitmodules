@@ -1,0 +1,4 @@
+[submodule "bin/apothecary"]
+	path = bin/apothecary
+	url = https://github.com/danoli3/apothecary.git
+	branch = bleeding
