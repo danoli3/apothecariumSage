@@ -65,14 +65,26 @@ void ofApp::setup()
 	std::string lsResult = runBashCommand("ls -l");
 	ofLogNotice() << lsResult;
 
-	std::string magic_up = "./magic_up.sh";
-	ofLogNotice() << magic_up;	
-	std::string magicUpResult = runBashCommand(magic_up + " pwd");
+	//std::string magic_up = "./magic_up.sh";
+	//ofLogNotice() << magic_up;	
+	//std::string magicUpResult = runBashCommand(magic_up + " pwd");
+	//ofLogNotice() << magicUpResult;
+
+	//std::string command_one = "." + magicUpResult + "/scripts/calculate_formulas.sh";
+	//command_one.erase(std::remove(command_one.begin(), command_one.end(), '\n'), command_one.end());
+	//ofLogNotice() << command_one;
+	//std::string calculateFormulasResult = runBashCommand(command_one);
+	//ofLogNotice() << calculateFormulasResult;
+
+
+
+	std::string magicUpResult = runBashCommand("pwd");
+	ofLogNotice() << magicUpResult;
+	magicUpResult = runBashCommand("ls -a");
 	ofLogNotice() << magicUpResult;
 
-	//ofxSurfingGui::setLogLevel(OF_LOG_ERROR);
-
-	std::string command_one = "." + magicUpResult + "/scripts/calculate_formulas.sh";
+	std::string magic_up = "./apothecary";
+	std::string command_one = magic_up + "/scripts/calculate_formulas.sh";
 	command_one.erase(std::remove(command_one.begin(), command_one.end(), '\n'), command_one.end());
 	ofLogNotice() << command_one;
 	std::string calculateFormulasResult = runBashCommand(command_one);
@@ -83,7 +95,7 @@ void ofApp::setup()
 	std::string calculateFormulasExportResult = runBashCommand(command_one);
 	ofLogNotice() << calculateFormulasExportResult;
 
-	std::string command_two = "TARGET=vs BUNLDE=1 ./" + magicUpResult + "/scripts/calculate_formulas.sh";
+	std::string command_two = "TARGET=linux ARCH=64 BUNLDE=1 ./" + magic_up + "/scripts/calculate_formulas.sh";
 	ofLogNotice() << command_two;
 	std::string calculateFormulasVSResult = runBashCommand(command_two);
 	ofLogNotice() << calculateFormulasVSResult;
