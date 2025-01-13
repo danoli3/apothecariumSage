@@ -12,6 +12,12 @@ void windowFocusCallback(GLFWwindow * window, int focused) {
 	}
 }
 
+void ofApp::exit() {
+	if (customData) {
+		delete customData;
+		customData = NULL;
+	}
+}
 
 //--------------------------------------------------------------
 void ofApp::setup()
@@ -42,18 +48,23 @@ void ofApp::setup()
 
 	customFont.load("fonts/OCR.ttf", 48);
 
-	// Fill table data
-	data.resize(20); 
-	for (int i = 0; i < data.size(); ++i) {
-		data[i] = { i + 1, "Name " + std::to_string(i + 1), i * 10.0f, i * 1.0e5, i * 100, "Description " + std::to_string(i + 1) };
+	ofxSurfingHelpers::setMonitorsLayout(0, true, true);
+	ui.setup();
+	string path = "fonts/OCR.ttf";
+	float size = 14;
+	ui.setupFontForDefaultStyles(ofToDataPath(path), size);
+	e.setPathGlobal(ui.getPath());
+	e.setUiPtr(&ui);
+	e.setup();
 
-		ofLogNotice() << data[i].id << "," << data[i].name << "," << data[i].value << "," << data[i].largeValue << "," << data[i].anotherInt << "," << data[i].description;
-	}
+	customData = new dataCustom();
+	customData->color = ofColor::fuchsia;
+	customData->lastCommand = "hello";
+	customData->frameNum = -1;
 
 	 try {
-
 		 ofLogNotice() << "Current Path: " << fs::current_path();
-		 
+		
 		fs::path projectPath = fs::weakly_canonical(fs::current_path());
 		fs::path projectNamePath = projectPath.filename();
 		apothecaryRoot = projectNamePath.string();
@@ -117,6 +128,11 @@ void ofApp::setup()
 	 //// Set the focus callback
 	 //glfwSetWindowFocusCallback(window, windowFocusCallback);
 
+	/*data = new dataCustom();
+	data->color = ofColor::fuchsia;
+	data->lastCommand = "hello";
+	data->frameNum = -1;*/
+
 }
 
 //--------------------------------------------------------------
@@ -154,28 +170,132 @@ void ofApp::draw() {
 		//backgroundDraw();
 	}
 
+	ofClear(customData->color);
+	//update a var of the data
+	customData->frameNum = ofGetFrameNum();
+
+	string s;
+
 	ui.Begin();
 	{
-		/* Put windows here */
+		static bool bTheme = false;
+		static bool b = 0;
+		if (bTheme) {
+			bTheme = 0;
+			if (!b) {
+				b = 1;
+				ofxImGuiSurfing::ImGui_ThemeMoebiusSurfingBlue();
+			}
+		}
 
-		if (ui.BeginWindow(bGui)) // Handles windows management. No need to use RAW ImGui window/frame.
+	
+		if (ui.BeginWindow(bGui)) 
 		{
-			/* Put RAW Dear ImGui or custom ofxSurfingImGui widgets here. */
-
-			ui.AddAutoResizeToggle();
-			ui.AddSpacing();
-
-			// No need to handle the window as we are using ofxSurfingImGui
-			//ShowExampleTable();
-
-			// Another RAW Dear ImGui 
+			ui.Add(e.bGui, OFX_IM_TOGGLE_ROUNDED);
+		
 			ShowAngledHeaders();
 
 			ui.EndWindow();
 		}
 
-		// RAW Dear ImGui with his own window/frame management
+		if (ui.BeginWindow(bGuiConsole)) {			
+
+			ui.AddLabelBig("dataCustom");
+			ui.AddLabel("frameNum:\n" + ofToString(customData->frameNum));
+			ui.AddLabel("lastCommand:\n" + ofToString(customData->lastCommand));
+	
+			ui.AddSpacingSeparated();
+
+			if (ui.AddButton("HELP")) {
+				s = "[ HELP ]";
+				addToLog(s);
+
+				c.help_();
+				customData->lastCommand = "added help";
+			}
+			if (ui.AddButton("CLEAR")) {
+				s = "[ CLEAR ]";
+				addToLog(s);
+
+				c.clear_();
+				customData->lastCommand = "added clear";
+			}
+			ui.AddSpacingSeparated();
+
+			ui.Add(c._terminalSizeLimit);
+			ui.Add(c._maxHistoryLines);
+			ui.AddSpacingSeparated();
+
+			ui.AddLabelBig("Apothecary Command Center");
+
+			// Define platform and architecture options
+			std::vector<string> platforms = { "osx", "linux", "vs", "msys2", "ios", "tvos", "android", "emscripten" };
+			std::vector<string> architectures = { "32", "64", "arm", "arm64", "x86", "x86_64" };
+			ofParameter<int> selectedPlatform = 0; // Default to "osx"
+			ofParameter<int> selectedArchitecture = 0; // Default to "32"
+
+			// Dropdowns for platform and architecture
+			ui.AddLabel("Platform");
+			if (ui.AddCombo(selectedPlatform, platforms)) {
+				ofLogNotice() << "Selected platform: " << platforms[selectedPlatform];
+			}
+			ui.AddLabel("Architecture");
+			if (ui.AddCombo(selectedArchitecture, architectures)) {
+				ofLogNotice() << "Selected architecture: " << architectures[selectedArchitecture];
+			}
+
+			// Core Commands Section
+			ui.AddLabel("Core Commands");
+			if (ui.AddButton("Update Core", OFX_IM_BUTTON)) {
+				std::string command = "./apothecary/apothecary -t" + std::string(platforms[selectedPlatform]) + " -a" + std::string(architectures[selectedArchitecture]) + " update core";
+				ofLogNotice() << "Executing command: " << command;
+				system(command.c_str());
+			}
+
+			if (ui.AddButton("Clean Core", OFX_IM_BUTTON)) {
+				std::string command = "./apothecary/apothecary -t" + std::string(platforms[selectedPlatform]) + " -a" + std::string(architectures[selectedArchitecture]) + " clean core";
+				ofLogNotice() << "Executing command: " << command;
+				system(command.c_str());
+			}
+
+			// Addons Commands Section
+			ui.AddLabel("Addons Commands");
+			if (ui.AddButton("Update Addons", OFX_IM_BUTTON)) {
+				std::string command = "./apothecary/apothecary -t" + std::string(platforms[selectedPlatform]) + " -a" + std::string(architectures[selectedArchitecture]) + " update addons";
+				ofLogNotice() << "Executing command: " << command;
+				system(command.c_str());
+			}
+
+			if (ui.AddButton("Clean Addons", OFX_IM_BUTTON)) {
+				std::string command = "./apothecary/apothecary -t" + std::string(platforms[selectedPlatform]) + " -a" + std::string(architectures[selectedArchitecture]) + " clean addons";
+				ofLogNotice() << "Executing command: " << command;
+				system(command.c_str());
+			}
+
+			ui.AddLabelBig("Post Commands");
+			ui.AddLabel("setColor");
+			if (ui.AddButton("red", OFX_IM_BUTTON, 2, true)) {
+				s = "setColor red";
+				c.addLineCommnand(s, customData);
+			}
+			if (ui.AddButton("blue", OFX_IM_BUTTON, 2)) {
+				s = "setColor blue";
+				c.addLineCommnand(s, customData);
+			}
+			if (ui.AddButton("colorRandom", OFX_IM_BUTTON)) {
+				s = "colorRandom";
+				c.addLineCommnand(s, customData);
+			}
+
+			ui.EndWindow();
+		}
+		c.show(customData);
+		// Editor
+		e.draw();
+		// Demo
 		ImGui::ShowDemoWindow();
+
+		
 	}
 	ui.End();
 }
@@ -202,7 +322,6 @@ void ofApp::update() {
 		ellipsis = ellipsisStates[ellipsisIndex];
 	}
 
-
 	if (state == INTRO) {
 		introUpdate();
 		return;
@@ -216,8 +335,12 @@ void ofApp::update() {
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key)
 {
+	if (ui.isMouseOverInputText()) return;
+	if (ui.isOverGui()) return; // could be commented if preferred
+
+
 	if (key == ' ') {
-		bGui = !bGui;
+
 	} else if (key == 'f' || key == 'F') {
 		bFullscreen = !bFullscreen;
 		if (!bFullscreen) {
@@ -249,52 +372,6 @@ void ofApp::keyPressed(int key)
 			ofSetLogLevel(OF_LOG_NOTICE);
 		ofLogNotice("ofApp") << "bLogVerbose:" << bLogVerbose;
 	}
-}
-
-// Function to display a table with data
-//--------------------------------------------------------------
-void ofApp::ShowExampleTable() {
-	//// Begin the ImGui frame/window
-	//ImGui::Begin("Example Table");
-
-	// Create a table with 10 columns
-	if (ImGui::BeginTable("MyTable", 10)) {
-		// Setup the table columns
-		ImGui::TableSetupColumn("ID");
-		ImGui::TableSetupColumn("Name");
-		ImGui::TableSetupColumn("Value");
-		ImGui::TableSetupColumn("Large Value");
-		ImGui::TableSetupColumn("Another Int");
-		ImGui::TableSetupColumn("Description");
-		// Add more columns as needed
-		for (int col = 6; col < 10; ++col) {
-			ImGui::TableSetupColumn(("Column " + std::to_string(col)).c_str());
-		}
-
-		// Display the headers
-		ImGui::TableHeadersRow();
-
-		// Display the data rows
-		for (const auto& entry : data) {
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn(); ImGui::Text("%d", entry.id);
-			ImGui::TableNextColumn(); ImGui::Text("%s", entry.name.c_str());
-			ImGui::TableNextColumn(); ImGui::Text("%.1f", entry.value);
-			ImGui::TableNextColumn(); ImGui::Text("%.2f", entry.largeValue);
-			ImGui::TableNextColumn(); ImGui::Text("%d", entry.anotherInt);
-			ImGui::TableNextColumn(); ImGui::Text("%s", entry.description.c_str());
-			// Add more data columns if necessary
-			for (int col = 6; col < 10; ++col) {
-				ImGui::TableNextColumn(); ImGui::Text("Data %d", col);
-			}
-		}
-
-		// End the table
-		ImGui::EndTable();
-	}
-
-	//// End the ImGui frame/window
-	//ImGui::End();
 }
 
 // Another function to display a table with data
@@ -637,3 +714,12 @@ void ofApp::faderDraw() {
 			ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
 		}
 }
+
+void ofApp::addToLog(string s) {
+	//return;
+	stringstream ss;
+	ss << s;
+	std::cout << ss.str() << endl;
+	ofLog() << ss.str();
+}
+

@@ -15,9 +15,13 @@
 namespace fs = std::filesystem;
 #include <GLFW/glfw3.h>
 
+#include "SurfingThemeEditor.h"
+#include "SurfingConsole.h"
+
 class ofApp : public ofBaseApp {
 public:
 	void setup();
+	void exit();
 	void draw();
 	void update() override;
 	void keyPressed(int key);
@@ -36,9 +40,10 @@ public:
 	void windowFocusLost();
 
 	ofxSurfingGui ui;
-	ofParameter<bool> bGui { "ofApp", true };
+	ofParameter<bool> bGui { "apothecariumSage", true };
+	ofParameter<bool> bGuiUIConfig { "uiConfiguration", true };
 
-	void ShowExampleTable();
+
 	struct Data {
 		int id;
 		std::string name;
@@ -81,4 +86,20 @@ public:
 	float ellipsisInterval = 0.5f; // Time between ellipsis updates
 
 	ofTrueTypeFont customFont;
+
+	string text = "";
+	float v = 0;
+
+	SurfingThemeEditor e;
+
+	ofParameter<bool> bGuiConsole { "Console", true };
+
+	// A custom data struct for testing.
+	dataCustom * customData = NULL;
+
+	surfingConsole c = { 1 };
+
+	void addToLog(string s);
+
+
 };
