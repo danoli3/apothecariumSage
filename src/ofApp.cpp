@@ -166,7 +166,7 @@ void ofApp::draw() {
 			ui.AddSpacing();
 
 			// No need to handle the window as we are using ofxSurfingImGui
-			ShowExampleTable();
+			//ShowExampleTable();
 
 			// Another RAW Dear ImGui 
 			ShowAngledHeaders();
@@ -303,6 +303,46 @@ void ofApp::ShowAngledHeaders() {
 	// Using those as a base value to create width/height that are factor of the size of our font
 	const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
 	const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
+
+	if (ImGui::TreeNode("Apothecary Build Matrix")) {
+		const char * column_names[] = { "", "arm", "arm64", "x86", "x86_64", "jetson", "armv7l", "armv6l", "aarch64", "arm64ec" };
+		const int columns_count = IM_ARRAYSIZE(column_names);
+		const char * platform_names[] = { "Windows", "Linux", "MacOS", "iOS", "Android" };
+		const char * platform_types[] = { "vs", "linux", "osx", "ios", "android" };
+		const int rows_count = IM_ARRAYSIZE(platform_types);
+
+		static ImGuiTableFlags table_flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg;
+
+		if (ImGui::BeginTable("apothecary_build_table", columns_count, table_flags, ImVec2(0.0f, TEXT_BASE_HEIGHT * (rows_count + 1)))) {
+			ImGui::TableSetupColumn(column_names[0], ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_NoReorder);
+			for (int n = 1; n < columns_count; n++) {
+				ImGui::TableSetupColumn(column_names[n], ImGuiTableColumnFlags_WidthFixed);
+			}
+			ImGui::TableHeadersRow();
+			for (int row = 0; row < rows_count; row++) {
+				ImGui::PushID(row);
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+				ImGui::AlignTextToFramePadding();
+				ImGui::Text("%s", platform_types[row]);
+				for (int column = 1; column < columns_count; column++) {
+					if (ImGui::TableSetColumnIndex(column)) {
+						ImGui::PushID(column);
+						std::string button_label = "Build##" + std::to_string(row) + "_" + std::to_string(column);
+						if (ImGui::Button(button_label.c_str())) {
+							std::string command = "./apothecary/apothecary -t" + std::string(platform_types[row]) + " -a" + std::string(column_names[column]) + " update core";
+							ofLogNotice() << "Executing command: " << command;
+							runBashCommand(command.c_str());
+						}
+						ImGui::PopID();
+					}
+				}
+				ImGui::PopID();
+			}
+			ImGui::EndTable();
+		}
+		ImGui::TreePop();
+	}
 
 	if (ImGui::TreeNode("Angled headers"))
 	{
@@ -591,7 +631,7 @@ void ofApp::faderDraw() {
 		} else if (timerIntro <= timerIntroMAX) {
 			alpha = ofLerp(255, 0.0f, (timerIntro - midPoint) / midPoint);
 		}
-		ofLogNotice() << "alpha: " << alpha;
+		//ofLogNotice() << "alpha: " << alpha;
 		if (alpha > 1) {
 			ofSetColor(200, 0, 255, alpha);
 			ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
