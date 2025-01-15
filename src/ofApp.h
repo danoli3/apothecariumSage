@@ -20,11 +20,11 @@ namespace fs = std::filesystem;
 
 class ofApp : public ofBaseApp {
 public:
-	void setup();
-	void exit();
-	void draw();
+	void setup() override;
+	void exit() override;
+	void draw() override;
 	void update() override;
-	void keyPressed(int key);
+	void keyPressed(int key) override;
 	void mouseMoved(int x, int y) override;
 
 	void introUpdate();
@@ -99,7 +99,13 @@ public:
 
 	surfingConsole c = { 1 };
 
-	void addToLog(string s);
+	void addToLog(std::string s);
+	void queryYmlFiles();
+	// workflow files
+	std::vector<std::string> ymlFiles;
+	std::map<std::string, bool> workflowStates;
+	
+	ofColor defaultBackground;
 
 
 };

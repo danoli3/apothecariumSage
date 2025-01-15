@@ -48,7 +48,7 @@ void ofApp::setup()
 
 	customFont.load("fonts/OCR.ttf", 48);
 
-	ofxSurfingHelpers::setMonitorsLayout(0, true, true);
+//	ofxSurfingHelpers::setMonitorsLayout(0, true, true);
 	ui.setup();
 	string path = "fonts/OCR.ttf";
 	float size = 14;
@@ -56,9 +56,26 @@ void ofApp::setup()
 	e.setPathGlobal(ui.getPath());
 	e.setUiPtr(&ui);
 	e.setup();
+	
+//	GLFWwindow* window = ofGetWindowPtr()->getGLFWWindow();
+//	float pixelDensityX, pixelDensityY;
+//   glfwGetWindowContentScale(window, &pixelDensityX, &pixelDensityY);
+//   float pixelDensity = pixelDensityX;  // Use X scale for simplicity
+
+   // Scale ImGui UI
+//   ImGui::GetIO().FontGlobalScale = 2.0;
+
+   // Load Retina-scaled font
+//   ImGui::GetIO().Fonts->AddFontFromFileTTF("fonts/Roboto-Regular.ttf", 16.0f * pixelDensity);
+
+   // Optional: Adjust framebuffer scaling
+//   ImGui::GetIO().DisplayFramebufferScale = ImVec2(2, 2);
+	
+	queryYmlFiles();
+	
 
 	customData = new dataCustom();
-	customData->color = ofColor::fuchsia;
+	customData->color = ofColor(7,7,7,240);
 	customData->lastCommand = "hello";
 	customData->frameNum = -1;
 
@@ -158,7 +175,7 @@ void ofApp::draw() {
 		ofDrawRectangle(screenWidth - padding, padding, padding, screenHeight - 2 * padding);
 
 	}
-	ofSetColor(ofColor(7, 7, 7, 240));
+	ofSetColor(ofColor(7, 7, 7, 220));
 	ofDrawRectangle(1, 1, screenWidth-3, screenHeight-3);
 
 	if (state == INTRO) {
@@ -170,7 +187,7 @@ void ofApp::draw() {
 		//backgroundDraw();
 	}
 
-	ofClear(customData->color);
+//	ofClear(customData->color);
 	//update a var of the data
 	customData->frameNum = ofGetFrameNum();
 
@@ -178,34 +195,88 @@ void ofApp::draw() {
 
 	ui.Begin();
 	{
-		static bool bTheme = false;
-		static bool b = 0;
-		if (bTheme) {
-			bTheme = 0;
-			if (!b) {
-				b = 1;
-				ofxImGuiSurfing::ImGui_ThemeMoebiusSurfingBlue();
-			}
-		}
+//		static bool bTheme = false;
+//		static bool b = 0;
+//		if (bTheme) {
+//			bTheme = 0;
+//			if (!b) {
+//				b = 1;
+//				ofxImGuiSurfing::ImGui_ThemeMoebiusSurfingBlue();
+//			}
+//		}
+		
 
-	
 		if (ui.BeginWindow(bGui)) 
 		{
 			ui.Add(e.bGui, OFX_IM_TOGGLE_ROUNDED);
 		
 			ShowAngledHeaders();
+			
+			static ImGuiTableFlags tableFlags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
+				const int columnsCount = 3;  // Columns: Filename, State, Buttons
+				const int rowsCount = ymlFiles.size();
+
+				if (ImGui::BeginTable("workflow_table", columnsCount, tableFlags)) {
+					// Set up columns
+					ImGui::TableSetupColumn("Filename", ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_NoReorder);
+					ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed);
+					ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+					ImGui::TableHeadersRow();
+
+					// Populate rows
+					for (int row = 0; row < rowsCount; row++) {
+						const std::string& fileName = ymlFiles[row];
+						bool& isEnabled = workflowStates[fileName];
+
+						ImGui::PushID(row);
+						ImGui::TableNextRow();
+
+						// Column 0: Filename
+						ImGui::TableSetColumnIndex(0);
+						ImGui::Text("%s", fileName.c_str());
+
+						// Column 1: State
+						ImGui::TableSetColumnIndex(1);
+						ImGui::TextColored(isEnabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1), isEnabled ? "Enabled" : "Disabled");
+
+						// Column 2: Actions
+						ImGui::TableSetColumnIndex(2);
+
+						// Enable Button
+						if (!isEnabled && ImGui::Button("Enable")) {
+							// Run a command to enable the workflow
+							std::string enableCommand = "sed -i 's/DISABLE_WORKFLOW: \"true\"/DISABLE_WORKFLOW: \"false\"/' ./apothecary/.github/workflows/" + fileName + ".yml";
+							runBashCommand(enableCommand.c_str());
+							addToLog(fileName + " enableed");
+							isEnabled = true;
+						}
+						ImGui::SameLine();
+
+						// Disable Button
+						if (isEnabled && ImGui::Button("Disable")) {
+							// Run a command to disable the workflow
+							std::string disableCommand = "sed -i 's/DISABLE_WORKFLOW: \"false\"/DISABLE_WORKFLOW: \"true\"/' ./apothecary/.github/workflows/" + fileName + ".yml";
+							runBashCommand(disableCommand.c_str());
+							addToLog(fileName + " disabled");
+							isEnabled = false;
+						}
+
+						ImGui::PopID();
+					}
+
+					ImGui::EndTable();
+				}
 
 			ui.EndWindow();
 		}
 
 		if (ui.BeginWindow(bGuiConsole)) {			
 
-			ui.AddLabelBig("dataCustom");
+			ui.AddLabelBig("Apothecary Command Center");
+			ui.AddSpacingSeparated();
 			ui.AddLabel("frameNum:\n" + ofToString(customData->frameNum));
 			ui.AddLabel("lastCommand:\n" + ofToString(customData->lastCommand));
-	
 			ui.AddSpacingSeparated();
-
 			if (ui.AddButton("HELP")) {
 				s = "[ HELP ]";
 				addToLog(s);
@@ -221,12 +292,12 @@ void ofApp::draw() {
 				customData->lastCommand = "added clear";
 			}
 			ui.AddSpacingSeparated();
-
+			ui.AddSpacingSeparated();
 			ui.Add(c._terminalSizeLimit);
 			ui.Add(c._maxHistoryLines);
 			ui.AddSpacingSeparated();
-
-			ui.AddLabelBig("Apothecary Command Center");
+			
+#if disabled
 
 			// Define platform and architecture options
 			std::vector<string> platforms = { "osx", "linux", "vs", "msys2", "ios", "tvos", "android", "emscripten" };
@@ -286,11 +357,13 @@ void ofApp::draw() {
 				s = "colorRandom";
 				c.addLineCommnand(s, customData);
 			}
-
+#endif
 			ui.EndWindow();
 		}
 		c.show(customData);
 		// Editor
+		
+
 		e.draw();
 		// Demo
 		ImGui::ShowDemoWindow();
@@ -420,7 +493,7 @@ void ofApp::ShowAngledHeaders() {
 		}
 		ImGui::TreePop();
 	}
-
+#if disabled
 	if (ImGui::TreeNode("Angled headers"))
 	{
 		const char* column_names[] = { "Track", "cabasa", "ride", "smash", "tom-hi", "tom-mid", "tom-low", "hihat-o", "hihat-c", "snare-s", "snare-c", "clap", "rim", "kick" };
@@ -487,11 +560,11 @@ void ofApp::ShowAngledHeaders() {
 		}
 		ImGui::TreePop();
 	}
+#endif
 }
 
 void ofApp::mouseMoved(int x, int y ){
-	ofLogVerbose("ofApp") << "mouseMoved: x:" << x << " y:" << y;
-	
+
 	/*float distance = ofDist(x, y, ballPositionX, ballPositionY);
 
 	if(distance <= 15 || y < 300) {
@@ -710,16 +783,41 @@ void ofApp::faderDraw() {
 		}
 		//ofLogNotice() << "alpha: " << alpha;
 		if (alpha > 1) {
-			ofSetColor(200, 0, 255, alpha);
+			ofSetColor(71, 0, 40, alpha);
 			ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
 		}
 }
 
-void ofApp::addToLog(string s) {
+void ofApp::addToLog(std::string s) {
 	//return;
-	stringstream ss;
+	std::stringstream ss;
 	ss << s;
 	std::cout << ss.str() << endl;
 	ofLog() << ss.str();
 }
 
+
+void ofApp::queryYmlFiles() {
+	ymlFiles.clear();
+	workflowStates.clear();
+
+	try {
+		ofDirectory dir("../apothecary/.github/workflows/");
+		dir.allowExt("yml"); // Filter for .yml files
+		dir.listDir();       // List the files
+
+		for (auto& file : dir.getFiles()) {
+			std::string filePath = file.getAbsolutePath();
+			ofLogNotice() << filePath;
+			ymlFiles.push_back(filePath);
+
+			// Check if DISABLE_WORKFLOW is set to "false"
+			std::string checkCommand = "grep 'DISABLE_WORKFLOW: \"false\"' " + filePath + " > /dev/null 2>&1";
+			int result = system(checkCommand.c_str());
+			workflowStates[filePath] = (result == 0); // True if "false", otherwise false
+		}
+	} catch (const std::exception & ex) {
+		ofLogError() << "Error: " << ex.what();
+		apothecaryRoot = "";
+	}
+}

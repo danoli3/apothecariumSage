@@ -9,7 +9,7 @@ int main( ){
 	settings.depthBits = 16;
 	settings.numSamples = 2;
 	settings.mousePassThrough = false;
-	settings.floating = true;
+	settings.floating = false;
 	settings.decorated = true;
 	settings.windowMode = OF_WINDOW;
 	settings.setGLVersion(4, 1);
