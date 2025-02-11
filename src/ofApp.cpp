@@ -98,57 +98,32 @@ void ofApp::setup()
 		 ofLogError() << "Error: " << ex.what();
 		 apothecaryRoot = "";
 	 }
-	
-	std::string lsResult = runBashCommand("ls -l");
-	ofLogNotice() << lsResult;
 
-	//std::string magic_up = "./magic_up.sh";
-	//ofLogNotice() << magic_up;	
-	//std::string magicUpResult = runBashCommand(magic_up + " pwd");
-	//ofLogNotice() << magicUpResult;
+	 runBashCommandAsync("./apothecary/scripts/vs/install.sh", [](const std::string & output) {
+		 std::cout << "Callback received output: " << output;
+	 });
 
-	//std::string command_one = "." + magicUpResult + "/scripts/calculate_formulas.sh";
-	//command_one.erase(std::remove(command_one.begin(), command_one.end(), '\n'), command_one.end());
-	//ofLogNotice() << command_one;
-	//std::string calculateFormulasResult = runBashCommand(command_one);
-	//ofLogNotice() << calculateFormulasResult;
+	runBashCommandAsync("ls -l", [](const std::string & output) {
+		std::cout << "Callback received output: " << output;
+	});
+
+	runBashCommandAsync("pwd", [](const std::string & output) {
+		std::cout << "Callback received output: " << output;
+	});
+
+	runBashCommandAsync("./apothecary/apothecary.sh --help", [](const std::string & output) {
+		std::cout << "Callback received output: " << output;
+	});
+
+	runBashCommandAsync("./apothecary/apothecary/apothecary -tvs -a64 update curl", [](const std::string & output) {
+		std::cout << "Callback received output: " << output;
+	});
+
+	runBashCommandAsync("./apothecary/apothecary.sh -tvs -a64 update curl", [](const std::string & output) {
+		std::cout << "Callback received output: " << output;
+	});
 
 
-
-	std::string magicUpResult = runBashCommand("pwd");
-	ofLogNotice() << magicUpResult;
-	magicUpResult = runBashCommand("ls -a");
-	ofLogNotice() << magicUpResult;
-
-	std::string magic_up = "./apothecary";
-	std::string command_one = magic_up + "/scripts/calculate_formulas.sh";
-	command_one.erase(std::remove(command_one.begin(), command_one.end(), '\n'), command_one.end());
-	ofLogNotice() << command_one;
-	std::string calculateFormulasResult = runBashCommand(command_one);
-	ofLogNotice() << calculateFormulasResult;
-	
-	std::string calculateFormulasExport = runBashCommand("export TARGET=vs;export BUNLDE=1;");
-	ofLogNotice() << calculateFormulasExport;
-	std::string calculateFormulasExportResult = runBashCommand(command_one);
-	ofLogNotice() << calculateFormulasExportResult;
-
-	std::string command_two = "TARGET=linux ARCH=64 BUNLDE=1 ./" + magic_up + "/scripts/calculate_formulas.sh";
-	ofLogNotice() << command_two;
-	std::string calculateFormulasVSResult = runBashCommand(command_two);
-	ofLogNotice() << calculateFormulasVSResult;
-
-	 // GLFWwindow * window = static_cast<ofAppGLFWWindow *>(ofGetWindowPtr())->getGLFWWindow();
-
-	 //// Set the user pointer to pass the ofApp instance
-	 //glfwSetWindowUserPointer(window, this);
-
-	 //// Set the focus callback
-	 //glfwSetWindowFocusCallback(window, windowFocusCallback);
-
-	/*data = new dataCustom();
-	data->color = ofColor::fuchsia;
-	data->lastCommand = "hello";
-	data->frameNum = -1;*/
 
 }
 
@@ -627,6 +602,47 @@ std::string ofApp::runBashCommand(const std::string & command) {
 }
 
 
+void ofApp::runBashCommandAsync(const std::string & command, std::function<void(const std::string &)> callback) {
+	addToLog("Running Command: [" + command + "]");
+	std::thread([this, command, callback]() {
+		try {
+			isRunning = true;
+			std::ostringstream outputStream;
+			std::string bashCommand = "bash -c \"" + command + "\"";
+#ifdef _WIN32
+			FILE * pipe = _popen(bashCommand.c_str(), "r");
+#else
+			FILE * pipe = popen(bashCommand.c_str(), "r");
+#endif
+			if (!pipe) {
+				throw std::runtime_error("Failed to execute command.");
+			}
+
+			char buffer[128];
+			while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+				std::string output(buffer);
+				outputStream << output;
+				// FIX: Lock mutex only when modifying shared resources
+				{
+					std::lock_guard<std::mutex> guard(logMutex);
+					commandLog.push_back(output);
+					// Send output to callback
+					callback(output);
+				}				
+			}
+
+#ifdef _WIN32
+			_pclose(pipe);
+#else
+			pclose(pipe);
+#endif
+			isRunning = false;
+		} catch (const std::exception & ex) {
+			std::cerr << "Error: " << ex.what() << std::endl;
+		}
+	}).detach(); // Detach thread to run independently
+}
+
 
 void ofApp::windowFocusGained() {
 	isPaused = false; 
@@ -804,20 +820,33 @@ void ofApp::queryYmlFiles() {
 	try {
 		ofDirectory dir("../apothecary/.github/workflows/");
 		dir.allowExt("yml"); // Filter for .yml files
-		dir.listDir();       // List the files
+		dir.listDir(); // List the files
 
-		for (auto& file : dir.getFiles()) {
+		for (auto & file : dir.getFiles()) {
 			std::string filePath = file.getAbsolutePath();
-			ofLogNotice() << filePath;
+			ofLogNotice() << "Found YAML file: " << filePath;
 			ymlFiles.push_back(filePath);
 
-			// Check if DISABLE_WORKFLOW is set to "false"
-			std::string checkCommand = "grep 'DISABLE_WORKFLOW: \"false\"' " + filePath + " > /dev/null 2>&1";
-			int result = system(checkCommand.c_str());
-			workflowStates[filePath] = (result == 0); // True if "false", otherwise false
+			// Construct grep command
+			std::string checkCommand = "grep 'DISABLE_WORKFLOW: \"false\"' \"" + filePath + "\" > /dev/null 2>&1";
+
+			// Run asynchronously with captured file path
+			runBashCommandAsync(checkCommand, [this, filePath](const std::string & output) {
+				bool workflowEnabled = (output.empty()); // True if "false" was found
+
+				// Log workflow state
+				ofLogNotice() << "Workflow state for " << filePath << ": "
+							  << (workflowEnabled ? "ENABLED" : "DISABLED");
+
+				// Thread-safe update to workflowStates
+				{
+					std::lock_guard<std::mutex> guard(stateMutex);
+					this->workflowStates[filePath] = workflowEnabled;
+				}
+			});
 		}
 	} catch (const std::exception & ex) {
-		ofLogError() << "Error: " << ex.what();
+		ofLogError() << "Error in queryYmlFiles: " << ex.what();
 		apothecaryRoot = "";
 	}
 }

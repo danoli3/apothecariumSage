@@ -15,8 +15,25 @@
 namespace fs = std::filesystem;
 #include <GLFW/glfw3.h>
 
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <mutex>
+#include <sstream>
+#include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <functional>
+#include <iostream>
+#include <future>
+#include <algorithm>
+#include <mutex>
+
 #include "SurfingThemeEditor.h"
 #include "SurfingConsole.h"
+
+
 
 class ofApp : public ofBaseApp {
 public:
@@ -32,6 +49,8 @@ public:
 	void backgroundUpdate();
 	void backgroundDraw();
 	void faderDraw();
+
+	void runBashCommandAsync(const std::string & command, std::function<void(const std::string &)> callback);
 
 
 	glm::vec3 make_point(float R, float r, float u, float v, float scale = 1.0);
@@ -106,6 +125,16 @@ public:
 	std::map<std::string, bool> workflowStates;
 	
 	ofColor defaultBackground;
+
+	std::atomic<bool> isRunning { false };
+	std::mutex logMutex;
+	std::vector<std::string> commandLog;
+
+
+	// Shared mutex for thread-safe updates
+	std::mutex stateMutex;
+
+
 
 
 };
